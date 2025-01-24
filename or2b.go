@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -23,19 +22,10 @@ func main() {
 
 	// Get the output filename from the flag
 	outputFile := *outputFileName
-	cmd := exec.Command("bash", "-c", "oc whoami --show-server")
-	// apiURLOutput, err := cmd.Output()
-	// if err != nil {
-	// 	fmt.Println("Error fetching API URL:", err)
-	// 	return
-	// }
-	// apiURL := strings.TrimSpace(string(apiURLOutput))
-	// if err != nil {
-	// 	fmt.Println("Error fetching API URL:", err)
-	// 	return
-	// }
-	// Get the CLUSTER environment variable
-	// cluster := os.Getenv("CLUSTER")
+
+	// Define the clusters
+	clusters := []string{"dev-scp0", "cid-scp0", "ppr-scp0", "pro-scp0", "pro-scp1"}
+
 	// Start creating the HTML document
 	var buffer bytes.Buffer
 	buffer.WriteString(`<!DOCTYPE NETSCAPE-Bookmark-file-1>
@@ -44,60 +34,49 @@ func main() {
 <H1>Bookmarks</H1>
 <DL><p>
 `)
-	// <DT><H3 ADD_DATE="1609459200" LAST_MODIFIED="1651017600" PERSONAL_TOOLBAR_FOLDER="true" PROTECTION="weak" TITLE="Openshift ` + *filterPattern + ` Routes">
-	//     <A HREF="` + string(apiURL) + `" ADD_DATE="1609459200">` + cluster + ` OpenShift ` + *filterPattern + ` Routes</A>
-	// <DL><p>
 
-	// Execute the command to get the routes
-	var output []byte
-	var err error
-	if stat, _ := os.Stdin.Stat(); (stat.Mode() & os.ModeCharDevice) == 0 {
-		// Read from STDIN
-		output, err = io.ReadAll(os.Stdin)
+	for _, cluster := range clusters {
+		buffer.WriteString(fmt.Sprintf(`<DT><H3 ADD_DATE="%d" LAST_MODIFIED="%d" TITLE="%s">
+<DL><p>
+`, time.Now().Unix(), time.Now().Unix(), cluster))
+
+		// Execute the command to get the routes for each cluster
+		cmd := exec.Command("bash", "-c", fmt.Sprintf("oc get routes --all-namespaces --no-headers --context=default/api-%s-sf-rz-de:6443/jaegdi", cluster))
+		output, err := cmd.Output()
 		if err != nil {
-			fmt.Println("Error reading from STDIN:", err)
-			return
-		}
-	} else {
-		// Execute the command to get the routes
-		cmd = exec.Command("bash", "-c", "oc get routes --all-namespaces --no-headers")
-		output, err = cmd.Output()
-		if err != nil {
-			fmt.Println("Error fetching routes:", err)
-			return
-		}
-	}
-	if err != nil {
-		fmt.Println("Error fetching routes:", err)
-		return
-	}
-
-	// Iterate over each route
-	for _, line := range strings.Split(string(output), "\n") {
-		if line == "" {
-			continue // Skip empty lines
-		}
-		parts := strings.Fields(line)
-		if len(parts) < 3 {
-			continue // Skip lines that do not have sufficient data
+			fmt.Println("Error fetching routes for cluster", cluster, ":", err)
+			continue
 		}
 
-		namespace, name, host := parts[0], parts[1], parts[2]
+		// Iterate over each route
+		for _, line := range strings.Split(string(output), "\n") {
+			if line == "" {
+				continue // Skip empty lines
+			}
+			parts := strings.Fields(line)
+			if len(parts) < 3 {
+				continue // Skip lines that do not have sufficient data
+			}
 
-		// Filter by pattern
-		if *filterPattern != "" || strings.Contains(name, *filterPattern) || strings.Contains(host, *filterPattern) {
-			buffer.WriteString(fmt.Sprintf(`<DT><A HREF="http://%s" ADD_DATE="%d">%s in %s</A>
+			namespace, name, host := parts[0], parts[1], parts[2]
+
+			// Filter by pattern
+			if *filterPattern != "" && (strings.Contains(name, *filterPattern) || strings.Contains(host, *filterPattern)) {
+				buffer.WriteString(fmt.Sprintf(`<DT><A HREF="http://%s" ADD_DATE="%d">%s in %s</A>
 `, host, time.Now().Unix(), name, namespace))
+			}
 		}
+
+		buffer.WriteString(`</DL><p>
+`)
 	}
 
 	// End the HTML document
 	buffer.WriteString(`</DL><p>
-</DL><p>
 `)
 
 	// Write to the output file
-	err = os.WriteFile(outputFile, []byte(buffer.String()), 0644)
+	err := os.WriteFile(outputFile, []byte(buffer.String()), 0644)
 	if err != nil {
 		fmt.Println("Error writing to file:", err)
 		return
