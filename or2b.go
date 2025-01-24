@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -20,15 +21,21 @@ func main() {
 
 	flag.Parse()
 
-	// Check if a filter pattern was provided
-	if *filterPattern == "" {
-		fmt.Println("Please provide a filter pattern using the -pattern flag.")
-		return
-	}
-
 	// Get the output filename from the flag
 	outputFile := *outputFileName
-
+	cmd := exec.Command("bash", "-c", "oc whoami --show-server")
+	// apiURLOutput, err := cmd.Output()
+	// if err != nil {
+	// 	fmt.Println("Error fetching API URL:", err)
+	// 	return
+	// }
+	// apiURL := strings.TrimSpace(string(apiURLOutput))
+	// if err != nil {
+	// 	fmt.Println("Error fetching API URL:", err)
+	// 	return
+	// }
+	// Get the CLUSTER environment variable
+	// cluster := os.Getenv("CLUSTER")
 	// Start creating the HTML document
 	var buffer bytes.Buffer
 	buffer.WriteString(`<!DOCTYPE NETSCAPE-Bookmark-file-1>
@@ -36,14 +43,30 @@ func main() {
 <TITLE>Bookmarks</TITLE>
 <H1>Bookmarks</H1>
 <DL><p>
-<DT><H3 ADD_DATE="1609459200" LAST_MODIFIED="1651017600" PERSONAL_TOOLBAR_FOLDER="true" PROTECTION="weak" TITLE="OpenShift Routes">
-    <A HREF="http://example.com" ADD_DATE="1609459200">OpenShift Routes</A>
-<DL><p>
 `)
+	// <DT><H3 ADD_DATE="1609459200" LAST_MODIFIED="1651017600" PERSONAL_TOOLBAR_FOLDER="true" PROTECTION="weak" TITLE="Openshift ` + *filterPattern + ` Routes">
+	//     <A HREF="` + string(apiURL) + `" ADD_DATE="1609459200">` + cluster + ` OpenShift ` + *filterPattern + ` Routes</A>
+	// <DL><p>
 
 	// Execute the command to get the routes
-	cmd := exec.Command("oc", "get", "routes", "--all-namespaces", "--no-headers")
-	output, err := cmd.Output()
+	var output []byte
+	var err error
+	if stat, _ := os.Stdin.Stat(); (stat.Mode() & os.ModeCharDevice) == 0 {
+		// Read from STDIN
+		output, err = io.ReadAll(os.Stdin)
+		if err != nil {
+			fmt.Println("Error reading from STDIN:", err)
+			return
+		}
+	} else {
+		// Execute the command to get the routes
+		cmd = exec.Command("bash", "-c", "oc get routes --all-namespaces --no-headers")
+		output, err = cmd.Output()
+		if err != nil {
+			fmt.Println("Error fetching routes:", err)
+			return
+		}
+	}
 	if err != nil {
 		fmt.Println("Error fetching routes:", err)
 		return
@@ -62,7 +85,7 @@ func main() {
 		namespace, name, host := parts[0], parts[1], parts[2]
 
 		// Filter by pattern
-		if strings.Contains(name, *filterPattern) || strings.Contains(host, *filterPattern) {
+		if *filterPattern != "" || strings.Contains(name, *filterPattern) || strings.Contains(host, *filterPattern) {
 			buffer.WriteString(fmt.Sprintf(`<DT><A HREF="http://%s" ADD_DATE="%d">%s in %s</A>
 `, host, time.Now().Unix(), name, namespace))
 		}
