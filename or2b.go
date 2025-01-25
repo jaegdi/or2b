@@ -20,23 +20,11 @@ func main() {
 
 	flag.Parse()
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-	// Get the output filename from the flag
-	outputFile := *outputFileName
-
 	// Define the clusters
 	clusters := []string{"dev-scp0", "cid-scp0", "ppr-scp0", "pro-scp0", "pro-scp1"}
 
-	// Start creating the HTML document
-=======
-	cmd := exec.Command("bash", "-c", "oc whoami --show-server")
+	// cmd := exec.Command("bash", "-c", "oc whoami --show-server")
 
->>>>>>> Stashed changes
-=======
-	cmd := exec.Command("bash", "-c", "oc whoami --show-server")
-
->>>>>>> Stashed changes
 	var buffer bytes.Buffer
 	buffer.WriteString(`<!DOCTYPE NETSCAPE-Bookmark-file-1>
 <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
@@ -76,40 +64,22 @@ func main() {
 `, host, time.Now().Unix(), name, namespace))
 			}
 		}
-
-		buffer.WriteString(`</DL><p>
-`)
 	}
-
 	// End the HTML document
 	buffer.WriteString(`</DL><p>
 `)
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-	// Write to the output file
-	err := os.WriteFile(outputFile, []byte(buffer.String()), 0644)
-	if err != nil {
-		fmt.Println("Error writing to file:", err)
-		return
-=======
-=======
->>>>>>> Stashed changes
 	// Write to output file or STDOUT
 	if *outputFileName == "" {
 		// Write to STDOUT
 		fmt.Print(buffer.String())
 	} else {
 		// Write to file
-		err = os.WriteFile(*outputFileName, []byte(buffer.String()), 0644)
+		err := os.WriteFile(*outputFileName, []byte(buffer.String()), 0644)
 		if err != nil {
 			fmt.Println("Error writing to file:", err)
 			return
 		}
 		fmt.Printf("Bookmarks file created: %s\n", *outputFileName)
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 	}
 }
