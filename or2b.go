@@ -15,11 +15,12 @@ func main() {
 	filterPattern := flag.String("pattern", "", "Filter pattern for route names or hosts")
 	flag.StringVar(filterPattern, "p", "", "Filter pattern (shorthand)")
 
-	outputFileName := flag.String("output", "chrome_bookmarks.html", "Output file name")
-	flag.StringVar(outputFileName, "o", "chrome_bookmarks.html", "Output file name (shorthand)")
+	outputFileName := flag.String("output", "", "Output file name")
+	flag.StringVar(outputFileName, "o", "", "Output file name (shorthand)")
 
 	flag.Parse()
 
+<<<<<<< Updated upstream
 	// Get the output filename from the flag
 	outputFile := *outputFileName
 
@@ -27,6 +28,10 @@ func main() {
 	clusters := []string{"dev-scp0", "cid-scp0", "ppr-scp0", "pro-scp0", "pro-scp1"}
 
 	// Start creating the HTML document
+=======
+	cmd := exec.Command("bash", "-c", "oc whoami --show-server")
+
+>>>>>>> Stashed changes
 	var buffer bytes.Buffer
 	buffer.WriteString(`<!DOCTYPE NETSCAPE-Bookmark-file-1>
 <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
@@ -75,12 +80,25 @@ func main() {
 	buffer.WriteString(`</DL><p>
 `)
 
+<<<<<<< Updated upstream
 	// Write to the output file
 	err := os.WriteFile(outputFile, []byte(buffer.String()), 0644)
 	if err != nil {
 		fmt.Println("Error writing to file:", err)
 		return
+=======
+	// Write to output file or STDOUT
+	if *outputFileName == "" {
+		// Write to STDOUT
+		fmt.Print(buffer.String())
+	} else {
+		// Write to file
+		err = os.WriteFile(*outputFileName, []byte(buffer.String()), 0644)
+		if err != nil {
+			fmt.Println("Error writing to file:", err)
+			return
+		}
+		fmt.Printf("Bookmarks file created: %s\n", *outputFileName)
+>>>>>>> Stashed changes
 	}
-
-	fmt.Printf("Bookmarks file created: %s\n", outputFile)
 }
