@@ -21,6 +21,7 @@ func main() {
 	flag.Parse()
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 	// Get the output filename from the flag
 	outputFile := *outputFileName
 
@@ -28,6 +29,10 @@ func main() {
 	clusters := []string{"dev-scp0", "cid-scp0", "ppr-scp0", "pro-scp0", "pro-scp1"}
 
 	// Start creating the HTML document
+=======
+	cmd := exec.Command("bash", "-c", "oc whoami --show-server")
+
+>>>>>>> Stashed changes
 =======
 	cmd := exec.Command("bash", "-c", "oc whoami --show-server")
 
@@ -81,12 +86,15 @@ func main() {
 `)
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 	// Write to the output file
 	err := os.WriteFile(outputFile, []byte(buffer.String()), 0644)
 	if err != nil {
 		fmt.Println("Error writing to file:", err)
 		return
 =======
+=======
+>>>>>>> Stashed changes
 	// Write to output file or STDOUT
 	if *outputFileName == "" {
 		// Write to STDOUT
@@ -99,6 +107,9 @@ func main() {
 			return
 		}
 		fmt.Printf("Bookmarks file created: %s\n", *outputFileName)
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 	}
 }
