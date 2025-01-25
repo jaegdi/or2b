@@ -13,7 +13,10 @@ import (
 func main() {
 	// Parse command-line arguments
 	filterPattern := flag.String("pattern", "", "Filter pattern for route names or hosts")
-	flag.StringVar(filterPattern, "p", "", "Filter pattern (shorthand)")
+	flag.StringVar(filterPattern, "p", "", "Filter pattern for route names or hosts (shorthand)")
+
+	denyPattern := flag.String("denypattern", "", "Deny-Filter pattern for route names, namespaces or hosts")
+	flag.StringVar(denyPattern, "d", "", "Deny-Filter pattern for route names, namespaces or hosts (shorthand)")
 
 	outputFileName := flag.String("output", "chrome_bookmarks.html", "Output file name")
 	flag.StringVar(outputFileName, "o", "chrome_bookmarks.html", "Output file name (shorthand)")
@@ -28,18 +31,13 @@ func main() {
 
 	// Start creating the HTML document
 	var buffer bytes.Buffer
-	buffer.WriteString(`<!DOCTYPE NETSCAPE-Bookmark-file-1>
-<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
-<TITLE>Bookmarks</TITLE>
-<H1>Bookmarks</H1>
-<DL><p>
-`)
+	buffer.WriteString(fmt.Sprintf(`<!DOCTYPE NETSCAPE-Bookmark-file-1>` + "\n"))
+	buffer.WriteString(fmt.Sprintf(`<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">` + "\n"))
+	buffer.WriteString(fmt.Sprintf(`<TITLE>Bookmarks %s</TITLE>`+"\n", *filterPattern))
+	buffer.WriteString(fmt.Sprintf(`<H1>Bookmarks %s</H1>`+"\n", *filterPattern))
+	buffer.WriteString(fmt.Sprintf(`<DL><p>` + "\n"))
 
 	for _, cluster := range clusters {
-		buffer.WriteString(fmt.Sprintf(`<DT><H3 ADD_DATE="%d" LAST_MODIFIED="%d" TITLE="%s">
-<DL><p>
-`, time.Now().Unix(), time.Now().Unix(), cluster))
-
 		// Execute the command to get the routes for each cluster
 		cmd := exec.Command("bash", "-c", fmt.Sprintf("oc get routes --all-namespaces --no-headers --context=default/api-%s-sf-rz-de:6443/jaegdi", cluster))
 		output, err := cmd.Output()
@@ -47,6 +45,10 @@ func main() {
 			fmt.Println("Error fetching routes for cluster", cluster, ":", err)
 			continue
 		}
+
+		buffer.WriteString(fmt.Sprintf(`	<DT><H3 ADD_DATE="%d" LAST_MODIFIED="%d">%s</H3>`+"\n", time.Now().Unix(), time.Now().Unix(), cluster))
+
+		buffer.WriteString(fmt.Sprintf(`	<DL><p>` + "\n"))
 
 		// Iterate over each route
 		for _, line := range strings.Split(string(output), "\n") {
@@ -61,19 +63,18 @@ func main() {
 			namespace, name, host := parts[0], parts[1], parts[2]
 
 			// Filter by pattern
-			if *filterPattern != "" && (strings.Contains(name, *filterPattern) || strings.Contains(host, *filterPattern)) {
-				buffer.WriteString(fmt.Sprintf(`<DT><A HREF="http://%s" ADD_DATE="%d">%s in %s</A>
-`, host, time.Now().Unix(), name, namespace))
+			if *filterPattern != "" &&
+				(strings.Contains(name, *filterPattern) || strings.Contains(host, *filterPattern)) &&
+				!(strings.Contains(name, *denyPattern) || strings.Contains(namespace, *denyPattern) || strings.Contains(host, *denyPattern)) {
+				buffer.WriteString(fmt.Sprintf(`		<DT><A HREF="http://%s" ADD_DATE="%d">%s -- %s</A>`+"\n", host, time.Now().Unix(), namespace, name))
 			}
 		}
 
-		buffer.WriteString(`</DL><p>
-`)
+		buffer.WriteString(fmt.Sprintf(`	</DL><p>` + "\n"))
 	}
 
 	// End the HTML document
-	buffer.WriteString(`</DL><p>
-`)
+	buffer.WriteString(fmt.Sprintf(`</DL><p>` + "\n"))
 
 	// Write to the output file
 	err := os.WriteFile(outputFile, []byte(buffer.String()), 0644)
