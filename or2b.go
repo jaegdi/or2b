@@ -20,10 +20,30 @@ func loginCluster(cluster string) error {
 	return nil
 }
 
-func main() {
-	// Define the clusters
-	clusters := []string{"dev-scp0", "cid-scp0", "ppr-scp0", "pro-scp0", "pro-scp1"}
+func initClusters(clusters *[]string, login bool) {
+	// Trim spaces from cluster names
+	for i := range *clusters {
+		(*clusters)[i] = strings.TrimSpace((*clusters)[i])
+	}
 
+	if login {
+		currentcluster := os.Getenv("CLUSTER")
+		for _, cluster := range *clusters {
+			if err := loginCluster(cluster); err != nil {
+				continue
+			}
+			fmt.Println("Logged into cluster", cluster)
+		}
+		// Switch back to the original cluster
+		if err := loginCluster(currentcluster); err != nil {
+			fmt.Println("Error switching back to the original cluster", currentcluster, ":", err)
+		} else {
+			fmt.Println("Switched back to cluster", currentcluster)
+		}
+	}
+}
+
+func main() {
 	// Parse command-line arguments
 	filterPattern := flag.String("pattern", "", "Filter pattern for route names or hosts")
 	flag.StringVar(filterPattern, "p", "", "Filter pattern for route names or hosts (shorthand)")
@@ -37,24 +57,15 @@ func main() {
 	login := flag.Bool("login", false, "Login into clusters")
 	flag.BoolVar(login, "l", false, "Login into clusters (shorthand)")
 
+	// Add new parameter for clusters
+	clustersFlag := flag.String("clusters", "dev-scp0,cid-scp0,ppr-scp0,pro-scp0,pro-scp1", "Comma-separated list of clusters")
+	flag.StringVar(clustersFlag, "c", "dev-scp0,cid-scp0,ppr-scp0,pro-scp0,pro-scp1", "Comma-separated list of clusters (shorthand)")
+
 	flag.Parse()
 
-	// cmd := exec.Command("bash", "-c", "oc whoami --show-server")
-	if *login {
-		currentcluster := os.Getenv("CLUSTER")
-		for _, cluster := range clusters {
-			if err := loginCluster(cluster); err != nil {
-				continue
-			}
-			fmt.Println("Logged into cluster", cluster)
-		}
-		// Switch back to the original cluster
-		if err := loginCluster(currentcluster); err != nil {
-			fmt.Println("Error switching back to the original cluster", currentcluster, ":", err)
-		} else {
-			fmt.Println("Switched back to cluster", currentcluster)
-		}
-	}
+	// Split clusters string into slice
+	clusters := strings.Split(*clustersFlag, ",")
+	initClusters(&clusters, *login)
 
 	var buffer bytes.Buffer
 	buffer.WriteString(fmt.Sprintf(`<!DOCTYPE NETSCAPE-Bookmark-file-1>` + "\n"))
