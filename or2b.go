@@ -18,18 +18,16 @@ func main() {
 	denyPattern := flag.String("denypattern", "", "Deny-Filter pattern for route names, namespaces or hosts")
 	flag.StringVar(denyPattern, "d", "", "Deny-Filter pattern for route names, namespaces or hosts (shorthand)")
 
-	outputFileName := flag.String("output", "chrome_bookmarks.html", "Output file name")
-	flag.StringVar(outputFileName, "o", "chrome_bookmarks.html", "Output file name (shorthand)")
+	outputFileName := flag.String("output", "", "Output file name")
+	flag.StringVar(outputFileName, "o", "", "Output file name (shorthand)")
 
 	flag.Parse()
-
-	// Get the output filename from the flag
-	outputFile := *outputFileName
 
 	// Define the clusters
 	clusters := []string{"dev-scp0", "cid-scp0", "ppr-scp0", "pro-scp0", "pro-scp1"}
 
-	// Start creating the HTML document
+	// cmd := exec.Command("bash", "-c", "oc whoami --show-server")
+
 	var buffer bytes.Buffer
 	buffer.WriteString(fmt.Sprintf(`<!DOCTYPE NETSCAPE-Bookmark-file-1>` + "\n"))
 	buffer.WriteString(fmt.Sprintf(`<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">` + "\n"))
@@ -69,19 +67,21 @@ func main() {
 				buffer.WriteString(fmt.Sprintf(`		<DT><A HREF="http://%s" ADD_DATE="%d">%s -- %s</A>`+"\n", host, time.Now().Unix(), namespace, name))
 			}
 		}
-
-		buffer.WriteString(fmt.Sprintf(`	</DL><p>` + "\n"))
 	}
-
 	// End the HTML document
 	buffer.WriteString(fmt.Sprintf(`</DL><p>` + "\n"))
 
-	// Write to the output file
-	err := os.WriteFile(outputFile, []byte(buffer.String()), 0644)
-	if err != nil {
-		fmt.Println("Error writing to file:", err)
-		return
+	// Write to output file or STDOUT
+	if *outputFileName == "" {
+		// Write to STDOUT
+		fmt.Print(buffer.String())
+	} else {
+		// Write to file
+		err := os.WriteFile(*outputFileName, []byte(buffer.String()), 0644)
+		if err != nil {
+			fmt.Println("Error writing to file:", err)
+			return
+		}
+		fmt.Printf("Bookmarks file created: %s\n", *outputFileName)
 	}
-
-	fmt.Printf("Bookmarks file created: %s\n", outputFile)
 }
